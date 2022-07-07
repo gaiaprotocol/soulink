@@ -8,8 +8,9 @@ contract SoulinkURLLinker is ISoulinkURLLinker {
     ISoulink public immutable soulink;
 
     struct URL {
-        string platform;
+        string name;
         string url;
+        string image;
     }
 
     mapping(uint256 => URL[]) public urls;
@@ -18,10 +19,10 @@ contract SoulinkURLLinker is ISoulinkURLLinker {
         soulink = _soulink;
     }
 
-    function addURL(uint256 soulinkId, string calldata platform, string calldata url) external {
+    function addURL(uint256 soulinkId, string calldata name, string calldata url, string calldata image) external {
         require(msg.sender == soulink.ownerOf(soulinkId));
-        urls[soulinkId].push(URL({ platform: platform, url: url }));
-        emit AddURL(soulinkId, platform, url);
+        urls[soulinkId].push(URL({ name: name, url: url, image: image }));
+        emit AddURL(soulinkId, name, url, image);
     }
 
     function urlsLength(uint256 soulinkId) external view returns (uint256) {
