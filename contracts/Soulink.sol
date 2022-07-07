@@ -147,6 +147,7 @@ contract Soulink is Ownable, ERC4973("Soulink", "SL"), IERC2981, ISoulink {
         address to,
         uint256 tokenId
     ) internal override {
+        require(from == address(0) || to == address(0), "Soulink: Transfer not allowed");
         super._beforeTokenTransfer(from, to, tokenId);
     }
 
