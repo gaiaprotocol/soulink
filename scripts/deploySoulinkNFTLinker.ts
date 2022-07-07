@@ -3,9 +3,9 @@ import hardhat from "hardhat";
 async function main() {
     console.log("deploy start")
 
-    const Minter = await hardhat.ethers.getContractFactory("SoulinkMinter")
-    const minter = await Minter.deploy("")
-    console.log(`Minter address: ${minter.address}`)
+    const Linker = await hardhat.ethers.getContractFactory("SoulinkNFTLinker")
+    const linker = await Linker.deploy("")
+    console.log(`Linker address: ${linker.address}`)
 }
 
 main()
