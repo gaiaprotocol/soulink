@@ -2,10 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/ISoulinkMinter.sol";
 
 contract SoulinkMinter is Ownable, ISoulinkMinter {
-
     ISoulink public immutable soulink;
     address payable public feeTo;
     uint256 public mintPrice;
@@ -44,9 +44,9 @@ contract SoulinkMinter is Ownable, ISoulinkMinter {
     }
 
     function mint() payable public returns (uint256 id) {
-        require(soulink.nextId() < limit, "SoulinkMinter: Limit exceeded");
-        require(msg.value == mintPrice);
+        // require(soulink.totalSupply() < limit, "SoulinkMinter: Limit exceeded");
+        require(msg.value == mintPrice, "INVALID_MINTPRICE");
         id = soulink.mint(msg.sender);
-        feeTo.transfer(msg.value);
+        Address.sendValue(feeTo, msg.value);
     }
 }
