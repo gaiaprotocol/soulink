@@ -45,7 +45,7 @@ contract SoulinkMinter is Ownable, ISoulinkMinter {
     }
 
     function mint(bool discount, bytes calldata data) public payable returns (uint256 id) {
-        // require(soulink.totalSupply() < limit, "SoulinkMinter: Limit exceeded");
+        require(soulink.totalSupply() < limit, "SoulinkMinter: Limit exceeded");
         uint256 _mintPrice = mintPrice;
         if (discount) {
             require(discountDB != address(0), "No discountDB");

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "./libraries/SoulinkLibrary.sol";
 import "./interfaces/IERC721Metadata.sol";
 
 // import "./interfaces/ISoulink.sol";
@@ -120,26 +121,20 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         // emit SetMinter(target, _isMinter);
     }
 
-    function getTokenId(address owner) external pure returns (uint256) {
-        return _getTokenId(owner);
-    }
-
-    function _getTokenId(address owner) internal pure returns (uint256 id) {
-        assembly {
-            id := owner
-        }
+    function getTokenId(address owner) public pure returns (uint256) {
+        return SoulinkLibrary._getTokenId(owner);
     }
 
     function mint(address to) external returns (uint256 tokenId) {
         require(isMinter[msg.sender], "Soulink: Forbidden");
         require(balanceOf(to) == 0, "can have only 1 token");
-        tokenId = _getTokenId(to);
+        tokenId = getTokenId(to);
         _mint(to, tokenId);
         _internalId[tokenId] = _totalSupply; //_internalId starts from 1
     }
 
     function burn(uint256 tokenId) external {
-        require(_getTokenId(msg.sender) == tokenId, "ERC721: caller is not token owner");
+        require(getTokenId(msg.sender) == tokenId, "ERC721: caller is not token owner");
         _burn(tokenId);
         delete _internalId[tokenId];
         // emit ResetLink(tokenId);
@@ -154,13 +149,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         _requireMinted(id0);
         _requireMinted(id1);
 
-        (iId0, iId1) = _sort(_internalId[id0], _internalId[id1]);
-    }
-
-    function _sort(uint256 idA, uint256 idB) internal pure returns (uint256 id0, uint256 id1) {
-        require(idA != idB, "UniswapV2Library: IDENTICAL_ADDRESSES");
-        (id0, id1) = idA < idB ? (idA, idB) : (idB, idA);
-        require(id0 != uint256(0), "UniswapV2Library: ZERO_ADDRESS");
+        (iId0, iId1) = SoulinkLibrary._sort(_internalId[id0], _internalId[id1]);
     }
 
     /**
@@ -174,13 +163,13 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     ) external {
         require(block.timestamp <= deadlines[0] && block.timestamp <= deadlines[1], "expired");
 
-        uint256 myId = _getTokenId(msg.sender);
+        uint256 myId = getTokenId(msg.sender);
 
         bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadlines[0])));
-        require(_getTokenId(ECDSA.recover(hash0, sigs[0])) == myId, "ERC20Permit: invalid signature");
+        require(getTokenId(ECDSA.recover(hash0, sigs[0])) == myId, "ERC20Permit: invalid signature");
 
         bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, myId, deadlines[1])));
-        require(_getTokenId(ECDSA.recover(hash1, sigs[1])) == targetId, "ERC20Permit: invalid signature");
+        require(getTokenId(ECDSA.recover(hash1, sigs[1])) == targetId, "ERC20Permit: invalid signature");
 
         (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
         require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
@@ -189,7 +178,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     }
 
     function breakLink(uint256 targetId) external {
-        uint256 myId = _getTokenId(msg.sender);
+        uint256 myId = getTokenId(msg.sender);
         (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
         require(_isLinked[iId0][iId1], "NOT_LINKED");
         delete _isLinked[iId0][iId1];
