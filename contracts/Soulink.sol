@@ -19,13 +19,16 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
 
     mapping(uint256 => address) private _owners;
     mapping(address => uint256) private _balances;
-    uint256 private _totalSupply;
+
+    uint128 private _totalSupply;
+    uint128 private _burnCount;
 
     // keccak256("RequestLink(address to,uint256 deadline)");
     bytes32 private constant _REQUESTLINK_TYPEHASH = 0xc3b100a7bf35d534e6c9e325adabf47ef6ec87fd4874fe5d08986fbf0ad1efc4;
 
     mapping(address => bool) public isMinter;
-    mapping(address => mapping(address => bool)) internal _isLinked;
+    mapping(uint256 => mapping(uint256 => bool)) internal _isLinked;
+    mapping(uint256 => uint256) internal _internalId;
 
     string internal __baseURI;
 
@@ -72,7 +75,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     }
 
     function totalSupply() public view returns (uint256) {
-        return _totalSupply;
+        return _totalSupply - _burnCount;
     }
 
     function _exists(uint256 tokenId) internal view returns (bool) {
@@ -106,7 +109,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
 
         delete _balances[owner];
         delete _owners[tokenId];
-        _totalSupply--;
+        _burnCount++;
 
         emit Transfer(owner, address(0), tokenId);
     }
@@ -121,8 +124,10 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         return _getTokenId(owner);
     }
 
-    function _getTokenId(address owner) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(owner)));
+    function _getTokenId(address owner) internal pure returns (uint256 id) {
+        assembly {
+            id := owner
+        }
     }
 
     function mint(address to) external returns (uint256 tokenId) {
@@ -130,51 +135,64 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         require(balanceOf(to) == 0, "can have only 1 token");
         tokenId = _getTokenId(to);
         _mint(to, tokenId);
+        _internalId[tokenId] = _totalSupply; //_internalId starts from 1
     }
 
     function burn(uint256 tokenId) external {
         require(_getTokenId(msg.sender) == tokenId, "ERC721: caller is not token owner");
         _burn(tokenId);
+        delete _internalId[tokenId];
+        // emit ResetLink(tokenId);
     }
 
-    function isLinked(address a, address b) external view returns (bool) {
-        (address user0, address user1) = sortAddrs(a, b);
-        return _isLinked[user0][user1];
+    function isLinked(uint256 id0, uint256 id1) external view returns (bool) {
+        (uint256 iId0, uint256 iId1) = _getInternalIds(id0, id1);
+        return _isLinked[iId0][iId1];
     }
 
-    function sortAddrs(address addrA, address addrB) internal pure returns (address addr0, address addr1) {
-        require(addrA != addrB, "UniswapV2Library: IDENTICAL_ADDRESSES");
-        (addr0, addr1) = addrA < addrB ? (addrA, addrB) : (addrB, addrA);
-        require(addr0 != address(0), "UniswapV2Library: ZERO_ADDRESS");
+    function _getInternalIds(uint256 id0, uint256 id1) internal view returns (uint256 iId0, uint256 iId1) {
+        _requireMinted(id0);
+        _requireMinted(id1);
+
+        (iId0, iId1) = _sort(_internalId[id0], _internalId[id1]);
+    }
+
+    function _sort(uint256 idA, uint256 idB) internal pure returns (uint256 id0, uint256 id1) {
+        require(idA != idB, "UniswapV2Library: IDENTICAL_ADDRESSES");
+        (id0, id1) = idA < idB ? (idA, idB) : (idB, idA);
+        require(id0 != uint256(0), "UniswapV2Library: ZERO_ADDRESS");
     }
 
     /**
-        0: msg.sender
-        1: to
+        0: id of msg.sender
+        1: id of target
     */
     function setLink(
-        address to,
+        uint256 targetId,
         bytes[2] calldata sigs,
         uint256[2] calldata deadlines
     ) external {
         require(block.timestamp <= deadlines[0] && block.timestamp <= deadlines[1], "expired");
 
-        bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, to, deadlines[0])));
-        require(ECDSA.recover(hash0, sigs[0]) == msg.sender, "ERC20Permit: invalid signature");
+        uint256 myId = _getTokenId(msg.sender);
 
-        bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, msg.sender, deadlines[1])));
-        require(ECDSA.recover(hash1, sigs[1]) == to, "ERC20Permit: invalid signature");
+        bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadlines[0])));
+        require(_getTokenId(ECDSA.recover(hash0, sigs[0])) == myId, "ERC20Permit: invalid signature");
 
-        (address user0, address user1) = sortAddrs(msg.sender, to);
-        require(!_isLinked[user0][user1], "ALREADY_LINKED");
-        _isLinked[user0][user1] = true;
-        // emit SetLink(msg.sender, to);
+        bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, myId, deadlines[1])));
+        require(_getTokenId(ECDSA.recover(hash1, sigs[1])) == targetId, "ERC20Permit: invalid signature");
+
+        (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
+        require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
+        _isLinked[iId0][iId1] = true;
+        // emit SetLink(myId, targetId);
     }
 
-    function breakLink(address to) external {
-        (address user0, address user1) = sortAddrs(msg.sender, to);
-        require(_isLinked[user0][user1], "NOT_LINKED");
-        delete _isLinked[user0][user1];
-        // emit BreakLink(msg.sender, to);
+    function breakLink(uint256 targetId) external {
+        uint256 myId = _getTokenId(msg.sender);
+        (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
+        require(_isLinked[iId0][iId1], "NOT_LINKED");
+        delete _isLinked[iId0][iId1];
+        // emit BreakLink(myId, targetId);
     }
 }
