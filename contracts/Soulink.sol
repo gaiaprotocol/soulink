@@ -22,7 +22,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     uint256 private _totalSupply;
 
     // keccak256("RequestLink(address to,uint256 deadline)");
-    bytes32 public constant REQUESTLINK_TYPEHASH = 0xc3b100a7bf35d534e6c9e325adabf47ef6ec87fd4874fe5d08986fbf0ad1efc4;
+    bytes32 private constant _REQUESTLINK_TYPEHASH = 0xc3b100a7bf35d534e6c9e325adabf47ef6ec87fd4874fe5d08986fbf0ad1efc4;
 
     mapping(address => bool) public isMinter;
     mapping(address => mapping(address => bool)) internal _isLinked;
@@ -91,8 +91,8 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     }
 
     function _mint(address to, uint256 tokenId) internal {
+        require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
-        require(balanceOf(to) == 0, "can have only 1 token");
 
         _balances[to] = 1;
         _owners[tokenId] = to;
@@ -101,7 +101,6 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         emit Transfer(address(0), to, tokenId);
     }
 
-    // 링크가 깨지진 않음.
     function _burn(uint256 tokenId) internal {
         address owner = ownerOf(tokenId);
 
@@ -128,6 +127,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
 
     function mint(address to) external returns (uint256 tokenId) {
         require(isMinter[msg.sender], "Soulink: Forbidden");
+        require(balanceOf(to) == 0, "can have only 1 token");
         tokenId = _getTokenId(to);
         _mint(to, tokenId);
     }
@@ -159,10 +159,10 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     ) external {
         require(block.timestamp <= deadlines[0] && block.timestamp <= deadlines[1], "expired");
 
-        bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(REQUESTLINK_TYPEHASH, to, deadlines[0])));
+        bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, to, deadlines[0])));
         require(ECDSA.recover(hash0, sigs[0]) == msg.sender, "ERC20Permit: invalid signature");
 
-        bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(REQUESTLINK_TYPEHASH, msg.sender, deadlines[1])));
+        bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, msg.sender, deadlines[1])));
         require(ECDSA.recover(hash1, sigs[1]) == to, "ERC20Permit: invalid signature");
 
         (address user0, address user1) = sortAddrs(msg.sender, to);
