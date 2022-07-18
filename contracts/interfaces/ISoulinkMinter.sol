@@ -4,13 +4,20 @@ pragma solidity ^0.8.9;
 import "./ISoulink.sol";
 
 interface ISoulinkMinter {
-    event SetMintPrice(uint256 mintPrice);
-    event SetFeeTo(address payable feeTo);
-    event SetLimit(uint256 limit);
+    event SetMintPrice(uint96 mintPrice);
+    event SetFeeTo(address feeTo);
+    event SetLimit(uint96 limit);
+    event SetDiscountDB(address db);
 
     function soulink() external view returns (ISoulink);
-    function feeTo() external view returns (address payable);
-    function mintPrice() external view returns (uint256);
-    function limit() external view returns (uint256);
-    function mint() payable external returns (uint256 id);
+
+    function mintPrice() external view returns (uint96);
+
+    function feeTo() external view returns (address);
+
+    function limit() external view returns (uint96);
+
+    function discountDB() external view returns (address);
+
+    function mint(bool discount, bytes calldata data) external payable returns (uint256 id);
 }
