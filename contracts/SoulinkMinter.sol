@@ -49,7 +49,7 @@ contract SoulinkMinter is Ownable, ISoulinkMinter {
         uint256 _mintPrice = mintPrice;
         if (discount) {
             require(discountDB != address(0), "No discountDB");
-            uint16 dcRate = IDiscountDB(discountDB).getDiscountRate(msg.sender, _mintPrice, data);
+            uint16 dcRate = IDiscountDB(discountDB).getDiscountRate(msg.sender, data);
             _mintPrice = (_mintPrice * (10000 - dcRate)) / 10000;
         }
         require(msg.value == _mintPrice, "INVALID_MINTPRICE");

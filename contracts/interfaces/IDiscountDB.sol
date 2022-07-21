@@ -2,9 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface IDiscountDB {
-    function getDiscountRate(
-        address target,
-        uint256 mintPrice,
-        bytes calldata data
-    ) external view returns (uint16);
+    event UpdateNFTDiscountRate(address nft, uint16 discountRate);
+    event UpdateUserDiscountRate(address user, uint16 discountRate);
+
+    function getDiscountRate(address target, bytes calldata data) external view returns (uint16);
 }
