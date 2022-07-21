@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/SoulinkLibrary.sol";
 import "./interfaces/IERC721Metadata.sol";
@@ -166,10 +167,10 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         uint256 myId = getTokenId(msg.sender);
 
         bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadlines[0])));
-        require(getTokenId(ECDSA.recover(hash0, sigs[0])) == myId, "ERC20Permit: invalid signature");
+        SignatureChecker.isValidSignatureNow(msg.sender, hash0, sigs[0]);
 
         bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, myId, deadlines[1])));
-        require(getTokenId(ECDSA.recover(hash1, sigs[1])) == targetId, "ERC20Permit: invalid signature");
+        SignatureChecker.isValidSignatureNow(address(uint160(targetId)), hash1, sigs[1]);
 
         (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
         require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
