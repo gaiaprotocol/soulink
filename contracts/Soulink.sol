@@ -35,7 +35,7 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     }
 
     function setMinter(address target, bool _isMinter) external onlyOwner {
-        require(isMinter[target] != _isMinter, "Soulink: Permission not changed");
+        require(isMinter[target] != _isMinter, "UNCHANGED");
         isMinter[target] = _isMinter;
         emit SetMinter(target, _isMinter);
     }
@@ -80,8 +80,8 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
 
     //external functions
     function mint(address to) external returns (uint256 tokenId) {
-        require(isMinter[msg.sender], "Soulink: Forbidden");
-        require(balanceOf(to) == 0, "can have only 1 token");
+        require(isMinter[msg.sender], "UNAUTHORIZED");
+        require(balanceOf(to) == 0, "ALREADY_MINTED");
         tokenId = getTokenId(to);
         _mint(to, tokenId);
         _totalSupply++;
@@ -89,7 +89,7 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     }
 
     function burn(uint256 tokenId) external {
-        require(getTokenId(msg.sender) == tokenId, "ERC721: caller is not token owner");
+        require(getTokenId(msg.sender) == tokenId, "UNAUTHORIZED");
         _burn(tokenId);
         _burnCount++;
         delete _internalId[tokenId];
@@ -105,7 +105,7 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         bytes[2] calldata sigs,
         uint256[2] calldata deadlines
     ) external {
-        require(block.timestamp <= deadlines[0] && block.timestamp <= deadlines[1], "expired");
+        require(block.timestamp <= deadlines[0] && block.timestamp <= deadlines[1], "EXPIRED_DEADLINE");
 
         uint256 myId = getTokenId(msg.sender);
 
