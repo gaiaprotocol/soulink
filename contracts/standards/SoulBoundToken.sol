@@ -24,13 +24,13 @@ abstract contract SoulBoundToken is ERC165, ISoulBoundToken {
     }
 
     function balanceOf(address owner) public view virtual returns (uint256) {
-        require(owner != address(0), "ERC721: address zero is not a valid owner");
+        require(owner != address(0), "SBT: address zero is not a valid owner");
         return _balances[owner];
     }
 
     function ownerOf(uint256 tokenId) public view virtual returns (address) {
         address owner = _owners[tokenId];
-        require(owner != address(0), "ERC721: invalid token ID");
+        require(owner != address(0), "SBT: invalid token ID");
         return owner;
     }
 
@@ -58,12 +58,12 @@ abstract contract SoulBoundToken is ERC165, ISoulBoundToken {
     }
 
     function _requireMinted(uint256 tokenId) internal view virtual {
-        require(_exists(tokenId), "ERC721: invalid token ID");
+        require(_exists(tokenId), "SBT: invalid token ID");
     }
 
     function _mint(address to, uint256 tokenId) internal virtual {
-        require(to != address(0), "ERC721: mint to the zero address");
-        require(!_exists(tokenId), "ERC721: token already minted");
+        require(to != address(0), "SBT: mint to the zero address");
+        require(!_exists(tokenId), "SBT: token already minted");
 
         _beforeTokenTransfer(address(0), to, tokenId);
 
