@@ -31,6 +31,7 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
     mapping(address => bool) public isMinter;
     mapping(uint256 => mapping(uint256 => bool)) internal _isLinked;
     mapping(uint256 => uint256) internal _internalId;
+    mapping(bytes32 => bool) internal _notUsableSig;
 
     string internal __baseURI;
 
@@ -122,6 +123,24 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         // emit SetMinter(target, _isMinter);
     }
 
+    function updateSigNotUsable(bytes32 sigHash) external onlyOwner {
+        _notUsableSig[sigHash] = true;
+    }
+
+    function cancelLinkSig(
+        uint256 targetId,
+        uint256 deadline,
+        bytes calldata sig
+    ) external {
+        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadline)));
+        SignatureChecker.isValidSignatureNow(msg.sender, hash, sig);
+
+        bytes32 sigHash = keccak256(sig);
+        _requireUsable(sigHash);
+        _notUsableSig[sigHash] = true;
+        // emit CancelLinkSig(msg.sender, targetId, deadline);
+    }
+
     function getTokenId(address owner) public pure returns (uint256) {
         return SoulinkLibrary._getTokenId(owner);
     }
@@ -139,6 +158,10 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
         _burn(tokenId);
         delete _internalId[tokenId];
         // emit ResetLink(tokenId);
+    }
+
+    function _requireUsable(bytes32 sig) internal view {
+        require(!_notUsableSig[sig], "USED_SIGNATURE");
     }
 
     function isLinked(uint256 id0, uint256 id1) external view returns (bool) {
@@ -168,9 +191,15 @@ contract Soulink is Ownable, ERC165, EIP712, IERC721Metadata {
 
         bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadlines[0])));
         SignatureChecker.isValidSignatureNow(msg.sender, hash0, sigs[0]);
+        bytes32 sigHash = keccak256(sigs[0]);
+        _requireUsable(sigHash);
+        _notUsableSig[sigHash] = true;
 
         bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, myId, deadlines[1])));
         SignatureChecker.isValidSignatureNow(address(uint160(targetId)), hash1, sigs[1]);
+        sigHash = keccak256(sigs[1]);
+        _requireUsable(sigHash);
+        _notUsableSig[sigHash] = true;
 
         (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
         require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
