@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.15;
 
 library SoulinkLibrary {
     function _getTokenId(address owner) internal pure returns (uint256 id) {
