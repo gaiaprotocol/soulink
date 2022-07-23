@@ -23,7 +23,13 @@ const config: HardhatUserConfig = {
             },
         ],
     },
-    networks: {},
+    networks: {
+        popcateum: {
+            url: "https://dataseed.popcateum.org",
+            accounts: [process.env.ADMIN || ''],
+            chainId: 1213,
+        },
+    },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
     },
