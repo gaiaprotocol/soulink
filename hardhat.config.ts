@@ -24,6 +24,11 @@ const config: HardhatUserConfig = {
         ],
     },
     networks: {
+        mainnet: {
+            url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+            accounts: [process.env.ADMIN || ''],
+            chainId: 1,
+        },
         popcateum: {
             url: "https://dataseed.popcateum.org",
             accounts: [process.env.ADMIN || ''],
