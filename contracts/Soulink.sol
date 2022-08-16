@@ -12,8 +12,8 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     uint128 private _totalSupply;
     uint128 private _burnCount;
 
-    // keccak256("RequestLink(address to,uint256 deadline)");
-    bytes32 private constant _REQUESTLINK_TYPEHASH = 0xc3b100a7bf35d534e6c9e325adabf47ef6ec87fd4874fe5d08986fbf0ad1efc4;
+    // keccak256("RequestLink(uint256 targetId,uint256 deadline)");
+    bytes32 private constant _REQUESTLINK_TYPEHASH = 0xa09d82e5227cc630e060d997b23666070a7c20039c7884fd8280a04dcaef5042;
 
     mapping(address => bool) public isMinter;
     mapping(uint256 => mapping(uint256 => bool)) internal _isLinked;
@@ -41,7 +41,7 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     }
 
     function updateSigNotUsable(bytes32 sigHash) external onlyOwner {
-        _notUsableSig[sigHash] = true;
+        _useSignature(sigHash);
     }
 
     //external view/pure functions
@@ -66,13 +66,9 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         return !_notUsableSig[sigHash];
     }
 
-    //internal view/pure functions
+    //internal functions
     function _baseURI() internal view override returns (string memory) {
         return __baseURI;
-    }
-
-    function _requireUsable(bytes32 sig) internal view {
-        require(!_notUsableSig[sig], "USED_SIGNATURE");
     }
 
     function _getInternalIds(uint256 id0, uint256 id1) internal view returns (uint256 iId0, uint256 iId1) {
@@ -80,6 +76,27 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         _requireMinted(id1);
 
         (iId0, iId1) = SoulinkLibrary._sort(_internalId[id0], _internalId[id1]);
+    }
+
+    function _checkSignature(
+        address from,
+        uint256 toId,
+        uint256 fromDeadline,
+        bytes calldata fromSig
+    ) internal view {
+        require(
+            SignatureChecker.isValidSignatureNow(
+                from,
+                _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, toId, fromDeadline))),
+                fromSig
+            ),
+            "INVALID_SIGNATURE"
+        );
+    }
+
+    function _useSignature(bytes32 sigHash) internal {
+        require(!_notUsableSig[sigHash], "USED_SIGNATURE");
+        _notUsableSig[sigHash] = true;
     }
 
     //external functions
@@ -101,8 +118,8 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     }
 
     /**
-        0: id of msg.sender
-        1: id of target
+        [0]: from msg.sender
+        [1]: from target
     */
     function setLink(
         uint256 targetId,
@@ -113,17 +130,11 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
 
         uint256 myId = getTokenId(msg.sender);
 
-        bytes32 hash0 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadlines[0])));
-        SignatureChecker.isValidSignatureNow(msg.sender, hash0, sigs[0]);
-        bytes32 sigHash = keccak256(sigs[0]);
-        _requireUsable(sigHash);
-        _notUsableSig[sigHash] = true;
+        _checkSignature(msg.sender, targetId, deadlines[0], sigs[0]);
+        _useSignature(keccak256(sigs[0]));
 
-        bytes32 hash1 = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, myId, deadlines[1])));
-        SignatureChecker.isValidSignatureNow(address(uint160(targetId)), hash1, sigs[1]);
-        sigHash = keccak256(sigs[1]);
-        _requireUsable(sigHash);
-        _notUsableSig[sigHash] = true;
+        _checkSignature(address(uint160(targetId)), myId, deadlines[1], sigs[1]);
+        _useSignature(keccak256(sigs[1]));
 
         (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
         require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
@@ -144,12 +155,8 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         uint256 deadline,
         bytes calldata sig
     ) external {
-        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(_REQUESTLINK_TYPEHASH, targetId, deadline)));
-        SignatureChecker.isValidSignatureNow(msg.sender, hash, sig);
-
-        bytes32 sigHash = keccak256(sig);
-        _requireUsable(sigHash);
-        _notUsableSig[sigHash] = true;
+        _checkSignature(msg.sender, targetId, deadline, sig);
+        _useSignature(keccak256(sig));
         emit CancelLinkSig(msg.sender, targetId, deadline);
     }
 }
