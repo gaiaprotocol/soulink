@@ -22,10 +22,33 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
 
     string internal __baseURI;
 
-    constructor() SoulBoundToken("Soulink", "SL") EIP712("Soulink", "1") {
+    constructor(address[] memory addrs, uint256[2][] memory connections)
+        SoulBoundToken("Soulink", "SL")
+        EIP712("Soulink", "1")
+    {
         isMinter[msg.sender] = true;
 
         __baseURI = "https://api.soul.ink/metadata/";
+
+        for (uint256 i = 0; i < addrs.length; ) {
+            address user = addrs[i];
+            uint256 tokenId = getTokenId(user);
+            _mint(user, tokenId);
+            _internalId[tokenId] = i + 1;
+            unchecked {
+                i++;
+            }
+        }
+        _totalSupply = uint128(addrs.length);
+
+        for (uint256 i = 0; i < connections.length; ) {
+            uint256[2] memory connection = [connections[i][0], connections[i][1]];
+
+            _setLink(connection[0], connection[1]);
+            unchecked {
+                i++;
+            }
+        }
     }
 
     //ownership functions
@@ -99,10 +122,16 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         _notUsableSig[sigHash] = true;
     }
 
+    function _setLink(uint256 _id0, uint256 _id1) internal {
+        (uint256 iId0, uint256 iId1) = _getInternalIds(_id0, _id1);
+        require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
+        _isLinked[iId0][iId1] = true;
+        emit SetLink(_id0, _id1);
+    }
+
     //external functions
     function mint(address to) external returns (uint256 tokenId) {
         require(isMinter[msg.sender], "UNAUTHORIZED");
-        require(balanceOf(to) == 0, "ALREADY_MINTED");
         tokenId = getTokenId(to);
         _mint(to, tokenId);
         _totalSupply++;
@@ -136,10 +165,7 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
         _checkSignature(address(uint160(targetId)), myId, deadlines[1], sigs[1]);
         _useSignature(keccak256(sigs[1]));
 
-        (uint256 iId0, uint256 iId1) = _getInternalIds(myId, targetId);
-        require(!_isLinked[iId0][iId1], "ALREADY_LINKED");
-        _isLinked[iId0][iId1] = true;
-        emit SetLink(myId, targetId);
+        _setLink(myId, targetId);
     }
 
     function breakLink(uint256 targetId) external {
