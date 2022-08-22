@@ -81,7 +81,10 @@ contract Soulink is Ownable, SoulBoundToken, EIP712, ISoulink {
     }
 
     function isLinked(uint256 id0, uint256 id1) external view returns (bool) {
-        (uint256 iId0, uint256 iId1) = _getInternalIds(id0, id1);
+        if (!_exists(id0) || !_exists(id1)) {
+            return false;
+        }
+        (uint256 iId0, uint256 iId1) = SoulinkLibrary._sort(_internalId[id0], _internalId[id1]);
         return _isLinked[iId0][iId1];
     }
 
