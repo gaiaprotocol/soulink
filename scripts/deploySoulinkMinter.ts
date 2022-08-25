@@ -4,9 +4,9 @@ async function main() {
     console.log("deploy start")
 
     const SoulinkMinter = await hardhat.ethers.getContractFactory("SoulinkMinter")
-    const soulinkMinter = await SoulinkMinter.deploy("0x9f69C2a06c97fCAAc1E586b30Ea681c43975F052")
+    const soulinkMinter = await SoulinkMinter.deploy("0xb5a453d6d079d3aE2A103E1B2Daef33b698F706E", { nonce: 150 })
     const Soulink = await hardhat.ethers.getContractFactory("Soulink")
-    const soulink = Soulink.attach("0x9f69C2a06c97fCAAc1E586b30Ea681c43975F052");
+    const soulink = Soulink.attach("0xb5a453d6d079d3aE2A103E1B2Daef33b698F706E");
     await soulink.setMinter(soulinkMinter.address, true);
     console.log(`SoulinkMinter address: ${soulinkMinter.address}`)
 }

@@ -4,8 +4,8 @@ Soulink is your soul in web3 as a Soulbound Token.
 https://soul.ink
 
 ## Mainnet
-- Soulink: [0x9f69C2a06c97fCAAc1E586b30Ea681c43975F052](https://etherscan.io/address/0x9f69C2a06c97fCAAc1E586b30Ea681c43975F052)
-- SoulinkMinter: [0xECFFc91149b8B702dEa6905Ae304A9D36527060F](https://etherscan.io/address/0xECFFc91149b8B702dEa6905Ae304A9D36527060F)
+- Soulink: [0xb5a453d6d079d3aE2A103E1B2Daef33b698F706E](https://etherscan.io/address/0xb5a453d6d079d3aE2A103E1B2Daef33b698F706E)
+- SoulinkMinter: [0x838A1B44d56a8fb9D8Ee72cb12ECB15fe2aE711F](https://etherscan.io/address/0x838A1B44d56a8fb9D8Ee72cb12ECB15fe2aE711F)
 - DiscountDB: [0x1640C880E14F8913bA71644F6812eE58EAeF412F](https://etherscan.io/address/0x1640C880E14F8913bA71644F6812eE58EAeF412F)
 
 ## Popcateum
